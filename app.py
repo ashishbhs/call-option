@@ -1,56 +1,79 @@
+import streamlit as st
 import math
 from scipy import stats
 
-def black_scholes_call():
-    print("Black-Scholes Call Option Price Calculator")
-    print("Please enter the following values one at a time:")
-    
-    # Get user inputs
-    S = float(input("Spot Price of the underlying asset (S): "))
-    K = float(input("Strike Price of the option (K): "))
-    T = float(input("Time to expiration in years (T): "))
-    r = float(input("Risk-free interest rate (r) as decimal (e.g., 0.05 for 5%): "))
-    sigma = float(input("Volatility (σ) as decimal (e.g., 0.2 for 20%): "))
-    
-    # Calculate d1 and d2
-    d1 = (math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * math.sqrt(T))
-    d2 = d1 - sigma * math.sqrt(T)
-    
-    # Calculate call option price
-    call_price = S * stats.norm.cdf(d1) - K * math.exp(-r * T) * stats.norm.cdf(d2)
-    
-    # Display results
-    print("\nResults:")
-    print(f"d1: {d1:.4f}")
-    print(f"d2: {d2:.4f}")
-    print(f"Call Option Price: Rs:{call_price:.2f}")
-    
-    return call_price
+def calculate_black_scholes(S, K, T, r, sigma):
+    try:
+        # Calculate d1 and d2
+        d1 = (math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * math.sqrt(T))
+        d2 = d1 - sigma * math.sqrt(T)
+        
+        # Calculate call option price
+        call_price = S * stats.norm.cdf(d1) - K * math.exp(-r * T) * stats.norm.cdf(d2)
+        
+        return call_price, d1, d2  # Return 3 values on success
+    except Exception as e:
+        return None, None, None  # Return 3 values on failure (no error string needed)
 
 def main():
-    try:
-        call_price = black_scholes_call()
-    except ValueError:
-        print("Error: Please enter valid numerical values")
-    except ZeroDivisionError:
-        print("Error: Time to expiration and volatility must be greater than 0")
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
+    # Set page title and configuration
+    st.set_page_config(page_title="Black-Scholes Calculator", page_icon="📈")
     
-    # Ask if user wants to calculate another option
-    while True:
-        again = input("\nWould you like to calculate another option? (yes/no): ").lower()
-        if again == 'yes':
-            print("\n" + "-"*50 + "\n")
-            try:
-                call_price = black_scholes_call()
-            except Exception as e:
-                print(f"An error occurred: {str(e)}")
-        elif again == 'no':
-            print("Thank you for using the calculator!")
-            break
+    # Title and description
+    st.title("Black-Scholes Call Option Calculator")
+    st.write("Enter the parameters below to calculate the call option price using the Black-Scholes model.")
+    
+    # Create input fields in the sidebar
+    with st.sidebar:
+        st.header("Input Parameters")
+        S = st.number_input("Spot Price (S)", min_value=0.01, value=100.0, step=0.1)
+        K = st.number_input("Strike Price (K)", min_value=0.01, value=95.0, step=0.1)
+        T = st.number_input("Time to Expiration (years)", min_value=0.01, value=1.0, step=0.01)
+        r = st.number_input("Risk-free Rate (decimal)", min_value=0.0, value=0.05, step=0.01)
+        sigma = st.number_input("Volatility (decimal)", min_value=0.01, value=0.2, step=0.01)
+    
+    # Calculate button
+    if st.button("Calculate"):
+        call_price, d1, d2 = calculate_black_scholes(S, K, T, r, sigma)
+        
+        # Display results
+        st.subheader("Results")
+        if call_price is not None:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Call Option Price", f"${call_price:.2f}")
+                st.write(f"d1: {d1:.4f}")
+            with col2:
+                st.write(f"d2: {d2:.4f}")
+            
+            # Display input parameters used
+            with st.expander("Input Parameters Used"):
+                st.write(f"Spot Price (S): {S}")
+                st.write(f"Strike Price (K): {K}")
+                st.write(f"Time to Expiration (T): {T} years")
+                st.write(f"Risk-free Rate (r): {r}")
+                st.write(f"Volatility (σ): {sigma}")
         else:
-            print("Please enter 'yes' or 'no'")
+            st.error("Error in calculation: Invalid input parameters (e.g., division by zero or negative log).")
+    
+    # Add some information about Black-Scholes
+    with st.expander("About Black-Scholes Model"):
+        st.write("""
+        The Black-Scholes model is a mathematical model for pricing options contracts.
+        The formula used is:
+        C = S * N(d1) - K * e^(-rT) * N(d2)
+        
+        Where:
+        - C = Call option price
+        - S = Spot price
+        - K = Strike price
+        - T = Time to expiration
+        - r = Risk-free rate
+        - σ = Volatility
+        - N() = Cumulative distribution function of standard normal distribution
+        - d1 = [ln(S/K) + (r + σ²/2)T] / (σ√T)
+        - d2 = d1 - σ√T
+        """)
 
 if __name__ == "__main__":
     main()
